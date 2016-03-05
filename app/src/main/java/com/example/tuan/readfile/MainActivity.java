@@ -8,7 +8,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
-import android.os.Handler;
 import android.os.IBinder;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -30,7 +29,7 @@ import service.ReadFileService;
 
 public class MainActivity extends AppCompatActivity {
 
-    public static final String READ_FILE_RECEIVER_ACTION = "READ_FILE_ACTION";
+    public static final String INTENT_READ_FILE_RECEIVER_ACTION = "READ_FILE_ACTION";
     public static final String KEY_SCAN_RESULT_BROADCAST = "SCAN_RESULT_BROADCAST_KEY";
     private static final String KEY_SCAN_RESULT_ON_SAVE_INSTANCE_STATE = "KEY_SCAN_RESULT_ON_SAVE_INSTANCE_STATE";
     private static final String KEY_DATA_RECEIVED = "KEY_DATA_RECEIVED";
@@ -56,6 +55,7 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(this, ReadFileService.class);
         this.bindService(intent, mServiceConnection, Context.BIND_AUTO_CREATE);
         if(mIsServiceBound) {
+            mService.stopFileRead(false);
             mService.runInForegroundMode();
             registerMyReceiver();
             mService.startFileRead();
@@ -72,7 +72,7 @@ public class MainActivity extends AppCompatActivity {
         Animation vibrateAnim = AnimationUtils.loadAnimation(this, R.anim.vibrate);
         mStopButton.startAnimation(vibrateAnim);
         if(mIsServiceBound){
-            mService.startFileRead();
+            mService.stopFileRead(true);
             mService.stopForegroundMode(true);
         }
     }
@@ -94,7 +94,7 @@ public class MainActivity extends AppCompatActivity {
             startActivity(Intent.createChooser(shareIntent, sharePickerHeader));
         }
         else {
-            Toast.makeText(this, getResources().getString(R.string.data_not_rereceive), Toast.LENGTH_LONG).show();
+            Toast.makeText(this, getResources().getString(R.string.data_not_received), Toast.LENGTH_LONG).show();
         }
     }
 
@@ -103,6 +103,9 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
+        mStartButton.setText(getResources().getString(R.string.start));
+        mStopButton.setText(getResources().getString(R.string.stop));
+        mShareButton.setText(getResources().getString(R.string.share));
         if(savedInstanceState != null) {
             mScanResult = savedInstanceState.getString(KEY_SCAN_RESULT_ON_SAVE_INSTANCE_STATE);
             mMainDisplay.setText(mScanResult);
@@ -122,7 +125,7 @@ public class MainActivity extends AppCompatActivity {
     public void onBackPressed() {
         super.onBackPressed();
         if(mIsServiceBound) {
-            mService.stopFileRead();
+            mService.stopFileRead(true);
         }
         cleanUpOnExit();
     }
@@ -142,6 +145,9 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Unbind service and unregister receiver
+     */
     private void cleanUpOnExit() {
         if(mIsServiceBound) {
             unbindService(mServiceConnection);
@@ -150,6 +156,9 @@ public class MainActivity extends AppCompatActivity {
         unregisterMyReceiver();
     }
 
+    /**
+     * Unregister the broadcast receiver when not interested in listening
+     */
     private void unregisterMyReceiver() {
         if(mReceiver != null) {
             unregisterReceiver(mReceiver);
@@ -157,9 +166,12 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Register the broadcast receiver that listens to broadcast from ReadFileService
+     */
     private void registerMyReceiver() {
         IntentFilter filter = new IntentFilter();
-        filter.addAction(READ_FILE_RECEIVER_ACTION);
+        filter.addAction(INTENT_READ_FILE_RECEIVER_ACTION);
         mReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -192,6 +204,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onServiceDisconnected(ComponentName arg0) {
             mIsServiceBound = false;
+            unregisterMyReceiver();
         }
     };
 

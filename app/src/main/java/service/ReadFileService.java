@@ -35,8 +35,11 @@ public class ReadFileService extends Service {
     private final IBinder mBinder = new LocalBinder();
     private boolean mStopFileRead;
 
-    public void stopFileRead() {
-        mStopFileRead = true;
+    /**
+     * Flip this field to stop or start file scan in startFileRead method
+     */
+    public void stopFileRead(boolean isStopped) {
+        mStopFileRead = isStopped;
     }
 
     public void runInForegroundMode(){
@@ -48,7 +51,7 @@ public class ReadFileService extends Service {
                 .setContentText(getResources().getString(R.string.scanning))
                 .setContentIntent(pendingIntent);
         Notification notification;
-        //support API 14 and up
+        //support API 14
         if(Build.VERSION.SDK_INT < 16) {
             notification = builder.getNotification();
         }
@@ -58,6 +61,10 @@ public class ReadFileService extends Service {
         startForeground(1, notification);
     }
 
+    /**
+     * Scan external directory and retrieve files information on a background thread.
+     * If directory cannot be opened or is empty, broadcast a default string
+     */
     @BindString(R.string.file_error_or_empty) String fileErrorOrEmpty;
     public void startFileRead() {
         Thread thread = new Thread(new Runnable() {
@@ -70,29 +77,32 @@ public class ReadFileService extends Service {
 
                 if(files != null && files.length > 0) {
                     Map<Long, String> sortedOnSizeMap = new TreeMap<>(new ReverseComparator());
-                    Map<String, Integer> occurenceMap = new HashMap<>();
-                    Map<Integer, String> sortedOccurenceMap = new TreeMap<>(new ReverseComparator());
+                    Map<String, Integer> occurrenceMap = new HashMap<>();
+                    Map<Integer, String> sortedOccurrenceMap = new TreeMap<>(new ReverseComparator());
                     for (File fi : files) {
                         if(!mStopFileRead) {
-                            if (!fi.isDirectory()) {
+                            if(!fi.isDirectory()) {
                                 String[] names = getFileNameAndExtension(fi.getName());
                                 long fileSize = fi.length();
                                 sortedOnSizeMap.put(fileSize, names[0]);
-                                if (!occurenceMap.containsKey(names[1])) {
-                                    occurenceMap.put(names[1], 1);
+                                if(!occurrenceMap.containsKey(names[1])) {
+                                    occurrenceMap.put(names[1], 1);
                                 } else {
-                                    occurenceMap.put(names[1], occurenceMap.get(names[1]) + 1);
+                                    occurrenceMap.put(names[1], occurrenceMap.get(names[1]) + 1);
                                 }
                                 aveFileSize += fileSize;
                             }
                         }
+                        else {
+                            return;
+                        }
                     }
                     aveFileSize /= files.length;
-                    //sort ascending base on occurences of extensions
-                    for(Map.Entry e : occurenceMap.entrySet()) {
-                        sortedOccurenceMap.put((Integer) e.getValue(), (String) e.getKey());
+                    //sort ascending base on occurrences of extensions
+                    for(Map.Entry e : occurrenceMap.entrySet()) {
+                        sortedOccurrenceMap.put((Integer) e.getValue(), (String) e.getKey());
                     }
-                    composeScanResult(aveFileSize, sortedOnSizeMap, sortedOccurenceMap);
+                    composeScanResult(aveFileSize, sortedOnSizeMap, sortedOccurrenceMap);
                 }
                 else {
                     sendBroadCast(fileErrorOrEmpty);
@@ -102,6 +112,12 @@ public class ReadFileService extends Service {
         thread.start();
     }
 
+    /**
+     * Compose a string the contains file scan result
+     * @param aveFileSize average file size of all files scanned
+     * @param sizeMap Map containing file names, sorted ascending on size
+     * @param occurrenceMap Map containing file names, sorted ascending of number of file occurence
+     */
     private void composeScanResult(double aveFileSize, Map<Long, String> sizeMap, Map<Integer, String> occurrenceMap ) {
         String result = "";
         result += getResources().getString(R.string.name_size_heading);
@@ -130,6 +146,10 @@ public class ReadFileService extends Service {
         sendBroadCast(result);
     }
 
+    /**
+     * Sends a broadcast containing file scan result in a string
+     * @param result the scan result to be broadcasted
+     */
     private void sendBroadCast(String result) {
         //delay so status bar and progress bar show longer, can be removed with no harm to program
         try{
@@ -138,12 +158,17 @@ public class ReadFileService extends Service {
         catch(InterruptedException ie){
             //do nothing
         }
-        Intent intent = new Intent(MainActivity.READ_FILE_RECEIVER_ACTION);
+        Intent intent = new Intent(MainActivity.INTENT_READ_FILE_RECEIVER_ACTION);
         intent.putExtra(MainActivity.KEY_SCAN_RESULT_BROADCAST, result);
         sendBroadcast(intent);
         stopForegroundMode(true);
     }
 
+    /**
+     * Separate the file name and its extension
+     * @param fullName full file name with extension
+     * @return array of 2 strings, one for name and one for extension
+     */
     private String[] getFileNameAndExtension(String fullName) {
         int position = fullName.lastIndexOf(FILE_EXTENSION_SEPARATOR);
         return new String[]{fullName.substring(0, position), fullName.substring(++position)};

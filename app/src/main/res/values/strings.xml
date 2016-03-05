@@ -15,6 +15,6 @@
     <string name="start">Start</string>
     <string name="stop">Stop</string>
     <string name="share">Share</string>
-    <string name="data_not_rereceive">No data received, cannot share</string>
+    <string name="data_not_received">No data received, cannot share</string>
 
 </resources>
