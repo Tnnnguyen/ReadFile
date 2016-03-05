@@ -1,0 +1,20 @@
+<resources>
+
+    <string name="app_name">ReadFile</string>
+    <string name="scanning">Scanning Files</string>
+    <string name="share_subject">File Scan Result</string>
+    <string name="share_picker_header">Share with</string>
+    <string name="file_error_or_empty">Cannot open directory or directory is empty</string>
+    <string name="name_size_heading">Names and Sizes of 10 Biggest Files\n\n</string>
+    <string name="avg_heading">\n\nAverage File Size\n\n</string>
+    <string name="frequency_heading">\n\nMost Frequent File Extensions and Frequencies\n\n</string>
+    <string name="name">Name</string>
+    <string name="size">Size</string>
+    <string name="extension">Extension</string>
+    <string name="frequency">Frequency</string>
+    <string name="start">Start</string>
+    <string name="stop">Stop</string>
+    <string name="share">Share</string>
+    <string name="data_not_rereceive">No data received, cannot share</string>
+
+</resources>
