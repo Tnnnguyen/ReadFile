@@ -98,7 +98,7 @@ public class ReadFileService extends Service {
                         }
                     }
                     aveFileSize /= files.length;
-                    //sort ascending base on occurrences of extensions
+                    //sort descending base on occurrences of extensions
                     for(Map.Entry e : occurrenceMap.entrySet()) {
                         sortedOccurrenceMap.put((Integer) e.getValue(), (String) e.getKey());
                     }
@@ -115,8 +115,8 @@ public class ReadFileService extends Service {
     /**
      * Compose a string the contains file scan result
      * @param aveFileSize average file size of all files scanned
-     * @param sizeMap Map containing file names, sorted ascending on size
-     * @param occurrenceMap Map containing file names, sorted ascending of number of file occurence
+     * @param sizeMap Map containing file names, sorted descending on size
+     * @param occurrenceMap Map containing file names, sorted descending of number of file occurence
      */
     private void composeScanResult(double aveFileSize, Map<Long, String> sizeMap, Map<Integer, String> occurrenceMap ) {
         String result = "";
@@ -161,7 +161,6 @@ public class ReadFileService extends Service {
         Intent intent = new Intent(MainActivity.INTENT_READ_FILE_RECEIVER_ACTION);
         intent.putExtra(MainActivity.KEY_SCAN_RESULT_BROADCAST, result);
         sendBroadcast(intent);
-        stopForegroundMode(true);
     }
 
     /**
@@ -172,14 +171,6 @@ public class ReadFileService extends Service {
     private String[] getFileNameAndExtension(String fullName) {
         int position = fullName.lastIndexOf(FILE_EXTENSION_SEPARATOR);
         return new String[]{fullName.substring(0, position), fullName.substring(++position)};
-    }
-
-    /**
-     * Stop the foreground mode of the service
-     * @param removeNotification status bar notification is removed if true
-     */
-    public void stopForegroundMode(boolean removeNotification) {
-        stopForeground(removeNotification);
     }
 
     @Override
@@ -200,7 +191,7 @@ public class ReadFileService extends Service {
     }
 
     /**
-     * To keep element sorted in ascending order as they are inserted
+     * To keep element sorted in descending order as they are inserted
      * into the TreeMap.
      * Avoid one sort extra operation.
      * Will compare sub classes of Number

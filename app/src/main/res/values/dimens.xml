@@ -8,5 +8,6 @@
     <dimen name="border_view_padding">10dp</dimen>
     <dimen name="border_view_corner_radius">15dp</dimen>
     <dimen name="border_view_stroke_width">1dp</dimen>
+    <dimen name="button_margin">5dp</dimen>
 
 </resources>

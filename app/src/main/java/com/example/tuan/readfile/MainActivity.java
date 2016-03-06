@@ -2,6 +2,7 @@ package com.example.tuan.readfile;
 
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
+import android.app.ActivityManager;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -11,6 +12,7 @@ import android.content.ServiceConnection;
 import android.os.IBinder;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.Animation;
@@ -33,12 +35,13 @@ public class MainActivity extends AppCompatActivity {
     public static final String KEY_SCAN_RESULT_BROADCAST = "SCAN_RESULT_BROADCAST_KEY";
     private static final String KEY_SCAN_RESULT_ON_SAVE_INSTANCE_STATE = "KEY_SCAN_RESULT_ON_SAVE_INSTANCE_STATE";
     private static final String KEY_DATA_RECEIVED = "KEY_DATA_RECEIVED";
-    private ReadFileService mService;
+    private static final String KEY_IS_SERVICE_BOUND = "KEY_IS_SERVICE_BOUND";
     private boolean mIsServiceBound;
     private boolean mIsChangingConfiguration;
-    private BroadcastReceiver mReceiver;
-    private String mScanResult;
     private boolean mReceiveData;
+    private String mScanResult;
+    private BroadcastReceiver mReceiver;
+    private ReadFileService mService;
     @Bind(R.id.loading_wheel) ProgressBar mLoadingWheel;
     @Bind(R.id.main_display) TextView mMainDisplay;
 
@@ -52,9 +55,11 @@ public class MainActivity extends AppCompatActivity {
         AnimatorSet set = new AnimatorSet();
         set.play(animBack).after(anim);
         set.start();
-        Intent intent = new Intent(this, ReadFileService.class);
-        this.bindService(intent, mServiceConnection, Context.BIND_AUTO_CREATE);
-        if(mIsServiceBound) {
+        if(!mIsServiceBound) {
+            Intent intent = new Intent(this, ReadFileService.class);
+            this.bindService(intent, mServiceConnection, Context.BIND_AUTO_CREATE);
+        }
+        else {
             mService.stopFileRead(false);
             mService.runInForegroundMode();
             registerMyReceiver();
@@ -71,10 +76,7 @@ public class MainActivity extends AppCompatActivity {
         unregisterMyReceiver();
         Animation vibrateAnim = AnimationUtils.loadAnimation(this, R.anim.vibrate);
         mStopButton.startAnimation(vibrateAnim);
-        if(mIsServiceBound){
-            mService.stopFileRead(true);
-            mService.stopForegroundMode(true);
-        }
+        unBindMyService();
     }
 
     @BindString(R.string.share_subject) String shareSubject;
@@ -98,6 +100,19 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+//    /**
+//     * To check if a service is running
+//     */
+//    private boolean isMyServiceRunning(Class<?> serviceClass) {
+//        ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+//        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+//            if (serviceClass.getName().equals(service.service.getClassName())) {
+//                return true;
+//            }
+//        }
+//        return false;
+//    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -110,6 +125,7 @@ public class MainActivity extends AppCompatActivity {
             mScanResult = savedInstanceState.getString(KEY_SCAN_RESULT_ON_SAVE_INSTANCE_STATE);
             mMainDisplay.setText(mScanResult);
             mReceiveData = savedInstanceState.getBoolean(KEY_DATA_RECEIVED);
+            mIsServiceBound = savedInstanceState.getBoolean(KEY_IS_SERVICE_BOUND);
         }
     }
 
@@ -124,10 +140,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onBackPressed() {
         super.onBackPressed();
-        if(mIsServiceBound) {
-            mService.stopFileRead(true);
-        }
-        cleanUpOnExit();
+        unBindMyService();
     }
 
     @Override
@@ -135,25 +148,15 @@ public class MainActivity extends AppCompatActivity {
         super.onSaveInstanceState(outState);
         outState.putString(KEY_SCAN_RESULT_ON_SAVE_INSTANCE_STATE, mScanResult);
         outState.putBoolean(KEY_DATA_RECEIVED, mReceiveData);
+        outState.putBoolean(KEY_IS_SERVICE_BOUND, mIsServiceBound);
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         if (!mIsChangingConfiguration) {
-            cleanUpOnExit();
+            unBindMyService();
         }
-    }
-
-    /**
-     * Unbind service and unregister receiver
-     */
-    private void cleanUpOnExit() {
-        if(mIsServiceBound) {
-            unbindService(mServiceConnection);
-        }
-        mIsServiceBound = false;
-        unregisterMyReceiver();
     }
 
     /**
@@ -163,6 +166,18 @@ public class MainActivity extends AppCompatActivity {
         if(mReceiver != null) {
             unregisterReceiver(mReceiver);
             mReceiver = null;
+        }
+    }
+
+    /**
+     * Stop the background thread that is scanning and unbind the service
+     */
+    private void unBindMyService() {
+        if(mIsServiceBound && mService != null) {
+            mService.stopFileRead(true);
+            unbindService(mServiceConnection);
+            mIsServiceBound = false;
+            unregisterMyReceiver();
         }
     }
 
@@ -181,14 +196,13 @@ public class MainActivity extends AppCompatActivity {
                     mReceiveData = true;
                 }
                 mLoadingWheel.setVisibility(View.GONE);
-                unregisterMyReceiver();
+                unBindMyService();
             }
         };
         registerReceiver(mReceiver, filter);
     }
 
     private ServiceConnection mServiceConnection = new ServiceConnection() {
-
         @Override
         public void onServiceConnected(ComponentName className,
                                        IBinder service) {
@@ -207,5 +221,4 @@ public class MainActivity extends AppCompatActivity {
             unregisterMyReceiver();
         }
     };
-
 }
