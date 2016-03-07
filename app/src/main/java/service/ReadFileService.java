@@ -161,6 +161,7 @@ public class ReadFileService extends Service {
         Intent intent = new Intent(MainActivity.INTENT_READ_FILE_RECEIVER_ACTION);
         intent.putExtra(MainActivity.KEY_SCAN_RESULT_BROADCAST, result);
         sendBroadcast(intent);
+        stopForeground(true);
     }
 
     /**
