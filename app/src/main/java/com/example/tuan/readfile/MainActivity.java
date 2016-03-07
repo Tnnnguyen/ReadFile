@@ -126,13 +126,24 @@ public class MainActivity extends AppCompatActivity {
             mMainDisplay.setText(mScanResult);
             mReceiveData = savedInstanceState.getBoolean(KEY_DATA_RECEIVED);
             mIsServiceBound = savedInstanceState.getBoolean(KEY_IS_SERVICE_BOUND);
+            if(mIsServiceBound && mReceiver == null){
+                registerMyReceiver();
+            }
         }
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        if(!isChangingConfigurations()){
+        if(isChangingConfigurations()){
+            mIsChangingConfiguration = true;
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if(!mIsChangingConfiguration) {
             unBindMyService();
         }
     }
