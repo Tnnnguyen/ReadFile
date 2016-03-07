@@ -55,7 +55,7 @@ public class MainActivity extends AppCompatActivity {
         AnimatorSet set = new AnimatorSet();
         set.play(animBack).after(anim);
         set.start();
-        if(!mIsServiceBound) {
+        if(!mIsServiceBound || mService == null) {
             Intent intent = new Intent(this, ReadFileService.class);
             this.bindService(intent, mServiceConnection, Context.BIND_AUTO_CREATE);
         }
@@ -132,8 +132,8 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
-        if(isChangingConfigurations()){
-            mIsChangingConfiguration = true;
+        if(!isChangingConfigurations()){
+            unBindMyService();
         }
     }
 
@@ -149,14 +149,6 @@ public class MainActivity extends AppCompatActivity {
         outState.putString(KEY_SCAN_RESULT_ON_SAVE_INSTANCE_STATE, mScanResult);
         outState.putBoolean(KEY_DATA_RECEIVED, mReceiveData);
         outState.putBoolean(KEY_IS_SERVICE_BOUND, mIsServiceBound);
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (!mIsChangingConfiguration) {
-            unBindMyService();
-        }
     }
 
     /**
@@ -196,7 +188,6 @@ public class MainActivity extends AppCompatActivity {
                     mReceiveData = true;
                 }
                 mLoadingWheel.setVisibility(View.GONE);
-                unBindMyService();
             }
         };
         registerReceiver(mReceiver, filter);
