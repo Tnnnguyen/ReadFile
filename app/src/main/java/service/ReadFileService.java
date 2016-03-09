@@ -79,25 +79,32 @@ public class ReadFileService extends Service {
                     Map<Long, String> sortedOnSizeMap = new TreeMap<>(new ReverseComparator());
                     Map<String, Integer> occurrenceMap = new HashMap<>();
                     Map<Integer, String> sortedOccurrenceMap = new TreeMap<>(new ReverseComparator());
+                    int fileCounts = files.length;
                     for (File fi : files) {
                         if(!mStopFileRead) {
                             if(!fi.isDirectory()) {
                                 String[] names = getFileNameAndExtension(fi.getName());
-                                long fileSize = fi.length();
-                                sortedOnSizeMap.put(fileSize, names[0]);
-                                if(!occurrenceMap.containsKey(names[1])) {
-                                    occurrenceMap.put(names[1], 1);
-                                } else {
-                                    occurrenceMap.put(names[1], occurrenceMap.get(names[1]) + 1);
+                                if(names != null) {
+                                    long fileSize = fi.length();
+                                    sortedOnSizeMap.put(fileSize, names[0]);
+                                    if (!occurrenceMap.containsKey(names[1])) {
+                                        occurrenceMap.put(names[1], 1);
+                                    } else {
+                                        occurrenceMap.put(names[1], occurrenceMap.get(names[1]) + 1);
+                                    }
+                                    aveFileSize += fileSize;
                                 }
-                                aveFileSize += fileSize;
+                                else{
+                                    //decrement file count for every file name that cannot be processed
+                                    fileCounts--;
+                                }
                             }
                         }
                         else {
                             return;
                         }
                     }
-                    aveFileSize /= files.length;
+                    aveFileSize /= fileCounts;
                     //sort descending base on occurrences of extensions
                     for(Map.Entry e : occurrenceMap.entrySet()) {
                         sortedOccurrenceMap.put((Integer) e.getValue(), (String) e.getKey());
@@ -170,7 +177,17 @@ public class ReadFileService extends Service {
      * @return array of 2 strings, one for name and one for extension
      */
     private String[] getFileNameAndExtension(String fullName) {
+        //if fullName's length is 2: ".p", "aa", "a.", then it's meaningless for
+        //the purpose of this scan; therefore, return null
+        if(fullName == null || fullName.length() == 2) {
+            return null;
+        }
         int position = fullName.lastIndexOf(FILE_EXTENSION_SEPARATOR);
+        //if position of the period "." is first (no file name: .pdf), last (no file extension: hello.)
+        //or nowhere to be found in the string, return null
+        if(position <= 0 || position == (fullName.length() -1)) {
+            return null;
+        }
         return new String[]{fullName.substring(0, position), fullName.substring(++position)};
     }
 
