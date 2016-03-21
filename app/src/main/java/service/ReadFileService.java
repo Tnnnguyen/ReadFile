@@ -104,12 +104,19 @@ public class ReadFileService extends Service {
                             return;
                         }
                     }
-                    aveFileSize /= fileCounts;
-                    //sort descending base on occurrences of extensions
-                    for(Map.Entry e : occurrenceMap.entrySet()) {
-                        sortedOccurrenceMap.put((Integer) e.getValue(), (String) e.getKey());
+                    //handle the case where only 1 file is present in the directory and this single file
+                    //cannot be processed.
+                    if(fileCounts > 0) {
+                        aveFileSize /= fileCounts;
+                        //sort descending base on occurrences of extensions
+                        for (Map.Entry e : occurrenceMap.entrySet()) {
+                            sortedOccurrenceMap.put((Integer) e.getValue(), (String) e.getKey());
+                        }
+                        composeScanResult(aveFileSize, sortedOnSizeMap, sortedOccurrenceMap);
                     }
-                    composeScanResult(aveFileSize, sortedOnSizeMap, sortedOccurrenceMap);
+                    else {
+                        sendBroadCast(fileErrorOrEmpty);
+                    }
                 }
                 else {
                     sendBroadCast(fileErrorOrEmpty);
